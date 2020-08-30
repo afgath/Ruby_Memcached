@@ -1,14 +1,14 @@
 class Item
-  attr_accessor :flags, :exptime, :bytes, :noreply, :time, :value , :modified, :id
+  attr_accessor :flags, :exptime, :bytes, :noreply, :time, :value, :id
 
-  def initialize(flags, exptime, bytes, noreply, time, value, modified)
+  def initialize(flags, exptime, bytes, noreply, time, value, id)
     @flags = flags
     @exptime = exptime
     @bytes = bytes
     @noreply = noreply
     @time = time
     @value = value
-    @modified = modified
+    @id = id
   end
 
   def to_s
