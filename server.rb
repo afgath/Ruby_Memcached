@@ -29,18 +29,47 @@ loop do
       exist_value = false
       exist_value = true unless cache[array_validate[1]].nil?
       if request[0, 6].upcase == "APPEND" || request[0, 7].upcase == "PREPEND"
-        if array_validate.length >= 5 && array_validate <= 6
-          value = socket.gets.chomp
-          if exist_value && value.length.to_i == array_validate[4].to_i && valid
-            cache[array_validate[1]].value = cache[array_validate[1]].value.to_s + value unless array_validate[0].upcase == "PREPEND"
-            cache[array_validate[1]].value = value + cache[array_validate[1]].value.to_s unless array_validate[0].upcase == "APPEND"
+        if array_validate.length >= 5 && array_validate.length <= 6
+          input = socket.gets.chomp
+          if exist_value && input.to_s.length == array_validate[4].to_i && valid
+            cache[array_validate[1]].value = cache[array_validate[1]].value.to_s + input.to_s unless array_validate[0].upcase == "PREPEND"
+            cache[array_validate[1]].value = input.to_s + cache[array_validate[1]].value.to_s unless array_validate[0].upcase == "APPEND"
             cache[array_validate[1]].flags = array_validate[2]
             cache[array_validate[1]].exptime = array_validate[3]
-            cache[array_validate[1]].bytes.to_f += array_validate[4]
+            cache[array_validate[1]].bytes = (cache[array_validate[1]].bytes.to_i + array_validate[4].to_i).to_s
             socket.write("STORED\r\n")
           else
             socket.write("ERROR\r\n")
           end
+        else
+          socket.write("ERROR\r\n")
+        end
+
+      elsif request[0, 3].upcase == "CAS"
+        mark_exists = false
+        mark_notfound = false
+        index = cache.find_index { |k,| k== request[5, request.length] }
+        if cache[array_validate[1]].nil?
+          mark_notfound = true
+        elsif cache[array_validate[1]].modified || index.to_i != array_validate[5].to_i
+          mark_exists = true
+        end
+        if array_validate.count > 5 && array_validate.count < 7
+          value = socket.gets.chomp
+          if mark_exists || mark_notfound
+            socket.write("EXISTS\r\n") unless mark_notfound
+            socket.write("NOT_FOUND\r\n") unless  mark_exists
+          else
+            cache[array_validate[1]].flags = array_validate[2]
+            cache[array_validate[1]].exptime = array_validate[3]
+            cache[array_validate[1]].bytes = array_validate[4]
+            cache[array_validate[1]].noreply = array_validate[5]
+            cache[array_validate[1]].time = Time.new
+            cache[array_validate[1]].value = value
+            cache[array_validate[1]].modified = true
+            socket.write("STORED\r\n")
+          end
+
         else
           socket.write("ERROR\r\n")
         end
@@ -56,27 +85,24 @@ loop do
         else
           array_values = request[4, request.length].split(" ")
         end
-        if array_values[2].to_i.negative?
-          socket.write("ERROR\r\n")
-          valid = false
-        end
         if request[0, 3].upcase == "ADD" && cache.any? # If command=add then key must not exist
           apply = false unless cache[array_values[0]].nil?
         end
         if request[0, 7].upcase == "REPLACE" && cache[array_values[0]].nil? # If command=replace then key must exist
           apply = false
         end
-        if array_values.count < 4 || array_values.count > 5
+        if array_values.count < 4 || array_values.count > 5 || !valid
           socket.write("ERROR\r\n")
         else
           if valid
             if array_values.count == 4 # If item hasn't set the NoReply attribute
-              item = Item.new(array_values[1], array_values[2], array_values[3], '', nil , nil)
+              item = Item.new(array_values[1], array_values[2], array_values[3], '', nil , nil, false)
             elsif array_values.count == 5 # If item has set the NoReply attribute
-              item = Item.new(array_values[1], array_values[2], array_values[3], array_values[4], nil , nil)
+              item = Item.new(array_values[1], array_values[2], array_values[3], array_values[4], nil , nil, false)
             end
             if apply
               # Stores the item and requests the value
+              item.modified = true unless cache[array_values[0]].nil?
               cache[array_values[0]] = item
               value = socket.gets.chomp
               cache[array_values[0]].value = value
