@@ -4,6 +4,7 @@ require './item'
 
 
 cache = {}
+timer = nil
 hostname = 'localhost'
 port = 1997
 server = TCPServer.open(hostname, port)
@@ -33,12 +34,48 @@ loop do
       end
       exist_value = false
       exist_value = true unless cache[array_validate[1]].nil?
-      if request[0, 6].upcase == "APPEND" || request[0, 7].upcase == "PREPEND"
+      if array_validate[0] == 'DELETE'
+        if array_validate.length < 2
+          socket.write("ERROR\r\n")
+        elsif array_validate.length > 2
+          socket.write("CLIENT_ERROR bad command line format.\r\n")
+        elsif cache[array_validate[1]].nil?
+          socket.write("NOT_FOUND\r\n")
+        else
+          cache.delete(array_validate[1])
+          socket.write("DELETED\r\n")
+        end
+      elsif array_validate[0].upcase == 'FLUSH_ALL'
+        if array_validate.length > 2
+          socket.write("ERROR\r\n")
+        else
+          if !array_validate[1].to_i.nil?
+            Thread.kill(timer) unless timer.nil?
+            timer = Thread.new { sleep array_validate[1].to_i;; cache = {} }
+          else
+            cache = {}
+          end
+            socket.write("OK\r\n")
+        end
+      elsif array_validate[0].upcase == 'INCR' || array_validate[0].upcase == 'DECR'
+        if array_validate.length != 3
+          socket.write("ERROR\r\n")
+        elsif !cache[array_validate[1]].value.to_i.nil? && cache[array_validate[1]].value.to_i.positive? && !array_validate[2].to_i.nil? && array_validate[2].to_i.positive?
+          cache[array_validate[1]].value = (cache[array_validate[1]].value.to_i + array_validate[2].to_i).to_s unless array_validate[0].upcase == 'DECR'
+          cache[array_validate[1]].value = (cache[array_validate[1]].value.to_i - array_validate[2].to_i).to_s unless array_validate[0].upcase == 'INCR'
+          cache[array_validate[1]].value = '0' unless cache[array_validate[1]].value.to_i.positive?
+          socket.write(cache[array_validate[1]].value + "\r\n")
+        elsif cache[array_validate[1]].value.to_i.nil? || !cache[array_validate[1]].value.to_i.positive?
+          socket.write("CLIENT_ERROR cannot increment or decrement non-numeric value\r\n")
+        elsif array_validate[2].to_i.nil? || !array_validate[2].to_i.positive?
+          socket.write("CLIENT_ERROR invalid numeric delta argument\r\n")
+        end
+      elsif array_validate[0].upcase == 'APPEND' || array_validate[0].upcase == 'PREPEND'
         if array_validate.length >= 5 && array_validate.length <= 6
           input = socket.gets.chomp
           if exist_value && input.to_s.length == array_validate[4].to_i && valid
-            cache[array_validate[1]].value = cache[array_validate[1]].value.to_s + input.to_s unless array_validate[0].upcase == "PREPEND"
-            cache[array_validate[1]].value = input.to_s + cache[array_validate[1]].value.to_s unless array_validate[0].upcase == "APPEND"
+            cache[array_validate[1]].value = cache[array_validate[1]].value.to_s + input.to_s unless array_validate[0].upcase == 'PREPEND'
+            cache[array_validate[1]].value = input.to_s + cache[array_validate[1]].value.to_s unless array_validate[0].upcase == 'APPEND'
             cache[array_validate[1]].flags = array_validate[2]
             cache[array_validate[1]].exptime = array_validate[3]
             cache[array_validate[1]].bytes = (cache[array_validate[1]].bytes.to_i + array_validate[4].to_i).to_s
@@ -53,7 +90,7 @@ loop do
           socket.write("ERROR\r\n")
         end
 
-      elsif request[0, 3].upcase == "CAS"
+      elsif array_validate[0].upcase == 'CAS'
         mark_exists = false
         mark_notfound = false
         mark_wronglength = false
@@ -87,21 +124,21 @@ loop do
           socket.write("ERROR\r\n")
         end
 
-      elsif request[0, 7].upcase == "REPLACE" || request[0, 3].upcase == "SET" || request[0, 3].upcase == "ADD"
+      elsif array_validate[0].upcase == 'REPLACE' || array_validate[0].upcase == 'SET' || array_validate[0].upcase == 'ADD'
         apply = true # value that indicates If the operation applies
         if request[4, request.length].nil?
           socket.write("ERROR\r\n")
           valid = false
         end
-        if request[0, 7].upcase == "REPLACE"
+        if array_validate[0].upcase == 'REPLACE'
           array_values = request[8, request.length].split(" ")
         else
           array_values = request[4, request.length].split(" ")
         end
-        if request[0, 3].upcase == "ADD" && cache.any? # If command=add then key must not exist
+        if request[0, 3].upcase == 'ADD' && cache.any? # If command=add then key must not exist
           apply = false unless cache[array_values[0]].nil?
         end
-        if request[0, 7].upcase == "REPLACE" && cache[array_values[0]].nil? # If command=replace then key must exist
+        if array_validate[0].upcase == 'REPLACE' && cache[array_values[0]].nil? # If command=replace then key must exist
           apply = false
         end
         if array_values.count < 4 || array_values.count > 5 || !valid
@@ -130,13 +167,13 @@ loop do
             end
           end
         end
-      elsif request[0, 4].upcase == "GETS"
+      elsif array_validate[0].upcase == 'GETS'
         value = 'VALUE ' + request[5, request.length] + ' ' + cache[request[5, request.length]].to_s + ' ' + cache[request[5, request.length]].id.to_s + "\r\n" + cache[request[5, request.length]].get_value unless cache[request[5, request.length]].nil?
         socket.write(value) unless value.nil?
         socket.write("\r\n") unless value.nil?
         socket.write("END\r\n")
 
-      elsif request[0, 3].upcase == "GET"
+      elsif array_validate[0].upcase == 'GET'
         value = 'VALUE ' + request[4, request.length] + ' ' + cache[request[4, request.length]].to_s + "\r\n" + cache[request[4, request.length]].get_value unless cache[request[4, request.length]].nil?
         socket.write(value) unless value.nil?
         socket.write("\r\n") unless value.nil?

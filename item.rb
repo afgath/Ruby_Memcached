@@ -12,7 +12,7 @@ class Item
   end
 
   def to_s
-    @flags + ' ' + @bytes + ' ' + @noreply
+    @flags + ' ' + @value.length.to_s + ' ' + @noreply
   end
 
   def get_time
