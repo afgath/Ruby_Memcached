@@ -13,11 +13,14 @@ highest_id = 1
 loop do
   Thread.start(server.accept) do |socket| # Multithread started so it can serve multiple clients
     request = socket.gets.chomp
-    request = request[21, request.length]
+    # request = request[21, request.length]
     puts request
     loop do
       if request.nil? # Case: is not first command it receives the new interactions
         request = socket.gets.chomp
+      end
+      if request == ''
+        request = 'empty'
       end
       if request.upcase == "QUIT"
         break
@@ -49,11 +52,11 @@ loop do
         if array_validate.length > 2
           socket.write("ERROR\r\n")
         else
-          if !array_validate[1].to_i.nil?
+          if array_validate[1].nil? || array_validate[1].to_i.nil?
+            cache = {}
+          else
             Thread.kill(timer) unless timer.nil?
             timer = Thread.new { sleep array_validate[1].to_i;; cache = {} }
-          else
-            cache = {}
           end
             socket.write("OK\r\n")
         end
@@ -127,58 +130,57 @@ loop do
       elsif array_validate[0].upcase == 'REPLACE' || array_validate[0].upcase == 'SET' || array_validate[0].upcase == 'ADD'
         apply = true # value that indicates If the operation applies
         if request[4, request.length].nil?
-          socket.write("ERROR\r\n")
           valid = false
         end
-        if array_validate[0].upcase == 'REPLACE'
-          array_values = request[8, request.length].split(" ")
-        else
-          array_values = request[4, request.length].split(" ")
-        end
         if request[0, 3].upcase == 'ADD' && cache.any? # If command=add then key must not exist
-          apply = false unless cache[array_values[0]].nil?
+          apply = false unless cache[array_validate[1]].nil?
         end
-        if array_validate[0].upcase == 'REPLACE' && cache[array_values[0]].nil? # If command=replace then key must exist
+        if array_validate[0].upcase == 'REPLACE' && cache[array_validate[1]].nil? # If command=replace then key must exist
           apply = false
         end
-        if array_values.count < 4 || array_values.count > 5 || !valid
+        if array_validate.count < 5 || array_validate.count > 6 || !valid
           socket.write("ERROR\r\n")
         else
           if valid
-            if array_values.count == 4 # If item hasn't set the NoReply attribute
-              item = Item.new(array_values[1], array_values[2], array_values[3], '', nil , nil, 0)
-            elsif array_values.count == 5 # If item has set the NoReply attribute
-              item = Item.new(array_values[1], array_values[2], array_values[3], array_values[4], nil , nil, 0)
+            if array_validate.count == 5 # If item hasn't set the NoReply attribute
+              item = Item.new(array_validate[2], array_validate[3], array_validate[4], '', nil , nil, 0)
+            elsif array_validate.count == 6 # If item has set the NoReply attribute
+              item = Item.new(array_validate[2], array_validate[3], array_validate[4], array_validate[5], nil , nil, 0)
             end
             if apply
               # Stores the item and requests the value
-              item.id = highest_id unless cache[array_values[0]].nil?
-              cache[array_values[0]] = item
+              item.id = highest_id unless cache[array_validate[1]].nil?
+              cache[array_validate[1]] = item
               value = socket.gets.chomp
-              cache[array_values[0]].value = value
-              cache[array_values[0]].time = Time.new
-              highest_id += 1 unless value.length != cache[array_values[0]].bytes.to_i
-              socket.write("STORED\r\n") unless value.length > cache[array_values[0]].bytes.to_i
-              socket.write("CLIENT_ERROR bad data chunk\r\n") unless value.length == cache[array_values[0]].bytes.to_i
-              cache.delete(array_values[0]) unless value.length == cache[array_values[0]].bytes.to_i
+              cache[array_validate[1]].value = value
+              cache[array_validate[1]].time = Time.new
+              highest_id += 1 unless value.length != cache[array_validate[1]].bytes.to_i
+              socket.write("STORED\r\n") unless value.length > cache[array_validate[1]].bytes.to_i
+              socket.write("CLIENT_ERROR bad data chunk\r\n") unless value.length == cache[array_validate[1]].bytes.to_i
+              cache.delete(array_validate[1]) unless value.length == cache[array_validate[1]].bytes.to_i
             else
               socket.gets.chomp
               socket.write("NOT_STORED\r\n")
             end
           end
         end
-      elsif array_validate[0].upcase == 'GETS'
-        value = 'VALUE ' + request[5, request.length] + ' ' + cache[request[5, request.length]].to_s + ' ' + cache[request[5, request.length]].id.to_s + "\r\n" + cache[request[5, request.length]].get_value unless cache[request[5, request.length]].nil?
-        socket.write(value) unless value.nil?
-        socket.write("\r\n") unless value.nil?
-        socket.write("END\r\n")
-
-      elsif array_validate[0].upcase == 'GET'
-        value = 'VALUE ' + request[4, request.length] + ' ' + cache[request[4, request.length]].to_s + "\r\n" + cache[request[4, request.length]].get_value unless cache[request[4, request.length]].nil?
-        socket.write(value) unless value.nil?
-        socket.write("\r\n") unless value.nil?
-        socket.write("END\r\n")
-
+      elsif array_validate[0].upcase == 'GETS' || array_validate[0].upcase == 'GET'
+        if array_validate.length == 2
+          value = 'VALUE ' + request[5, request.length] + ' ' + cache[request[5, request.length]].to_s + ' ' + cache[request[5, request.length]].id.to_s + "\r\n" + cache[request[5, request.length]].get_value unless cache[request[5, request.length]].nil? || array_validate[0].upcase == 'GET'
+          value = 'VALUE ' + request[4, request.length] + ' ' + cache[request[4, request.length]].to_s + "\r\n" + cache[request[4, request.length]].get_value unless cache[request[4, request.length]].nil? || array_validate[0].upcase == 'GETS'
+          socket.write(value) unless value.nil?
+          socket.write("\r\n") unless value.nil?
+          socket.write("END\r\n")
+        else
+          socket.write("ERROR\r\n")
+        end
+      else
+        socket.write("ERROR\r\n")
+      # elsif array_validate[0].upcase == 'GET'
+      #   value = 'VALUE ' + request[4, request.length] + ' ' + cache[request[4, request.length]].to_s + "\r\n" + cache[request[4, request.length]].get_value unless cache[request[4, request.length]].nil?
+      #   socket.write(value) unless value.nil?
+      #   socket.write("\r\n") unless value.nil?
+      #   socket.write("END\r\n")
       end
       request = nil
     end

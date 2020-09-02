@@ -1,32 +1,24 @@
 require 'rspec'
-require './Memcached.rb'
-
-describe Memcached do
+require 'socket'
+class MemcachedDummy
+end
+describe MemcachedDummy do
   before(:example) do
-    @server = Memcached.new(1997)
-
-    Thread.new do
-      @server.start
-    end
-
+    @host = 'localhost'     # The web server
+    @port = 1997
+    @socket = TCPSocket.open(@host, @port)
     sleep 1  #Allow server to start, so client doesn't send data
-    #to the server before the server creates the socket.
-
-    @data = 'hello'
-    @client.send_data @data  #Make sure server has started before doing this.
   end
-end
-
-after(:example) do
-  @server.puts()
-  #allowing recv_data() to finish executing.
-  @server.client.close
-end
-
-describe '#handle_data' do
-  context 'given a string' do
-    it "returns reversed string" do
-      expect(@server.handle_data(@data)).to eql(@data.reverse)
+  describe '#set_no_args' do
+    context 'setting without enough args' do
+      it "returns error" do
+        @socket.puts('set')
+        expect(@socket.gets.chomp).to eql('ERROR')
+      end
     end
   end
 end
+
+# after(:example) do
+#   @server.puts()
+# end
