@@ -17,9 +17,10 @@ loop do
     puts request
     loop do
       if request.nil? # Case: is not first command it receives the new interactions
-        request = socket.gets.chomp
+        request = socket.gets
+        request = request.chomp unless request.nil?
       end
-      if request == ''
+      if request.nil? || request == ''
         request = 'empty'
       end
       if request.upcase == "QUIT"
@@ -54,9 +55,10 @@ loop do
         else
           if array_validate[1].nil? || array_validate[1].to_i.nil?
             cache = {}
+            highest_id = 1
           else
             Thread.kill(timer) unless timer.nil?
-            timer = Thread.new { sleep array_validate[1].to_i;; cache = {} }
+            timer = Thread.new { sleep array_validate[1].to_i; ; cache = {}; highest_id = 1 }
           end
             socket.write("OK\r\n")
         end
@@ -149,14 +151,14 @@ loop do
             end
             if apply
               # Stores the item and requests the value
-              item.id = highest_id unless cache[array_validate[1]].nil?
               cache[array_validate[1]] = item
               value = socket.gets.chomp
               cache[array_validate[1]].value = value
               cache[array_validate[1]].time = Time.new
-              highest_id += 1 unless value.length != cache[array_validate[1]].bytes.to_i
-              socket.write("STORED\r\n") unless value.length > cache[array_validate[1]].bytes.to_i
-              socket.write("CLIENT_ERROR bad data chunk\r\n") unless value.length == cache[array_validate[1]].bytes.to_i
+              cache[array_validate[1]].id = highest_id unless cache[array_validate[1]].nil?
+              highest_id += 1 unless value.length != array_validate[4].to_i
+              socket.write("STORED\r\n") unless value.length != array_validate[4].to_i
+              socket.write("CLIENT_ERROR bad data chunk\r\n") unless value.length == array_validate[4].to_i
               cache.delete(array_validate[1]) unless value.length == cache[array_validate[1]].bytes.to_i
             else
               socket.gets.chomp
