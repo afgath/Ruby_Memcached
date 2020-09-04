@@ -63,7 +63,7 @@ loop do
             socket.write("OK\r\n")
         end
       elsif array_validate[0].upcase == 'INCR' || array_validate[0].upcase == 'DECR'
-        if array_validate.length != 3
+        if array_validate.length != 3 || cache[array_validate[1]].nil?
           socket.write("ERROR\r\n")
         elsif !cache[array_validate[1]].value.to_i.nil? && cache[array_validate[1]].value.to_i.positive? && !array_validate[2].to_i.nil? && array_validate[2].to_i.positive?
           cache[array_validate[1]].value = (cache[array_validate[1]].value.to_i + array_validate[2].to_i).to_s unless array_validate[0].upcase == 'DECR'
