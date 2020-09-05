@@ -20,7 +20,7 @@ loop do
         request = socket.gets
         request = request.chomp unless request.nil? # To avoid chomp a nil
       end
-      if request.nil? || request == ''
+      if request.nil? || request.strip! == ''
         request = 'empty'
       end
       if request.upcase == "QUIT"
@@ -40,7 +40,7 @@ loop do
       end
       exist_value = false
       exist_value = true unless cache[array_validate[1]].nil?
-      if array_validate[0] == 'DELETE' # Case Delete an item by key
+      if array_validate[0].upcase == 'DELETE' # Case Delete an item by key
         if array_validate.length < 2
           socket.write("ERROR\r\n")
         elsif array_validate.length > 2
@@ -55,11 +55,11 @@ loop do
         if array_validate.length > 2
           socket.write("ERROR\r\n")
         else
+          Thread.kill(timer) unless timer.nil? #Kills previous thread to replace the timer
           if array_validate[1].nil? || array_validate[1].to_i.nil?
             cache = {}
             highest_id = 1
           else # Case flush_all command has a timer set
-            Thread.kill(timer) unless timer.nil? #Kills previous thread to replace the timer
             timer = Thread.new { sleep array_validate[1].to_i; ; cache = {}; highest_id = 1 }
           end
             socket.write("OK\r\n")

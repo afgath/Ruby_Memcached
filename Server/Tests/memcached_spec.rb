@@ -5,7 +5,7 @@ end
 describe MemcachedDummy do
   before(:example) do
     @host = 'localhost'     # The web server
-    @port = 1997
+    @port = 11211
     @socket = TCPSocket.open(@host, @port)
     sleep 1  #Allow server to start, so client doesn't send data
   end
