@@ -247,7 +247,7 @@ describe MemcachedDummy do
   describe '#add_non_existent_value' do
     context 'adding a non existent value' do
       it "returns STORED" do
-        @socket.puts('add dataAddNoEx 0 20 6')
+        @socket.puts('add dataAddNoEx 0 80 6')
         sleep 1
         @socket.puts('Planet')
         expect(@socket.gets.chomp).to eql('STORED')
@@ -408,20 +408,20 @@ describe MemcachedDummy do
       end
     end
   end
-  describe '#flush_all_timing' do
-    context 'Flush all in 1000 seconds' do
-      it "returns OK" do
-        @socket.puts('flush_all 1000')
-        expect(@socket.gets.chomp).to eql('OK')
-      end
-    end
-  end
-  describe '#flush_all' do
-    context 'Flush all now' do
-      it "returns OK" do
-        @socket.puts('flush_all')
-        expect(@socket.gets.chomp).to eql('OK')
-      end
-    end
-  end
+  # describe '#flush_all_timing' do
+  #   context 'Flush all in 1000 seconds' do
+  #     it "returns OK" do
+  #       @socket.puts('flush_all 1000')
+  #       expect(@socket.gets.chomp).to eql('OK')
+  #     end
+  #   end
+  # end
+  # describe '#flush_all' do
+  #   context 'Flush all now' do
+  #     it "returns OK" do
+  #       @socket.puts('flush_all')
+  #       expect(@socket.gets.chomp).to eql('OK')
+  #     end
+  #   end
+  # end
 end

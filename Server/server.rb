@@ -20,7 +20,7 @@ loop do
         request = socket.gets
         request = request.chomp unless request.nil? # To avoid chomp a nil
       end
-      if request.nil? || request.strip! == ''
+      if request.nil? || request.strip! == '' || request == ''
         request = 'empty'
       end
       if request.upcase == "QUIT"
@@ -155,15 +155,17 @@ loop do
             end
             if apply
               # Stores the item and requests the value
-              cache[array_validate[1]] = item
               value = socket.gets.chomp
-              cache[array_validate[1]].value = value
-              cache[array_validate[1]].time = Time.new
-              cache[array_validate[1]].id = highest_id unless cache[array_validate[1]].nil?
-              highest_id += 1 unless value.length != array_validate[4].to_i
-              socket.write("STORED\r\n") unless value.length != array_validate[4].to_i
-              socket.write("CLIENT_ERROR bad data chunk\r\n") unless value.length == array_validate[4].to_i
-              cache.delete(array_validate[1]) unless value.length == cache[array_validate[1]].bytes.to_i
+              if value.length == item.bytes.to_i
+                cache[array_validate[1]] = item
+                cache[array_validate[1]].value = value
+                cache[array_validate[1]].time = Time.new
+                cache[array_validate[1]].id = highest_id unless cache[array_validate[1]].nil?
+                highest_id += 1 unless value.length != array_validate[4].to_i
+                socket.write("STORED\r\n")
+              else
+                socket.write("CLIENT_ERROR bad data chunk\r\n")
+              end
             else
               socket.gets.chomp
               socket.write("NOT_STORED\r\n")
