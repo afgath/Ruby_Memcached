@@ -28,11 +28,11 @@ Ruby multiclient TCP sockets memcached server that runs by default on the **1121
 In order to keep it as simple as possible, you will only have to follow two steps to have your Ruby memcached server up and running.
 
 **1.** Locate the `Server` folder and open it:
-   ![Locate the ruby server folder](https://drive.google.com/uc?export=view&id=11h45J2_jCqwx3mECzLI1WJt0b6T6xw_c)
+   ![Locate the ruby server folder](https://i.imgur.com/MZmhN2R.png)
 
 
 **2.** Open a terminal or CMD inside the `Server` folder and run the command `ruby server.rb`: 
-   ![exec the server using terminal or CMD](https://drive.google.com/uc?export=view&id=1AazF5EV3DrNNjdfw-EtRi-fW1qxeya6E)
+   ![exec the server using terminal or CMD](https://i.imgur.com/ZpY27oI.png)
 
 And that's it, now you have a fully functional Memcached server running on the default port: **11211**
 
@@ -40,12 +40,12 @@ And that's it, now you have a fully functional Memcached server running on the d
 Now that your Memcached server is up, you can use the Telnet client to issue commands this way:
 
 **1.** Open a terminal or CMD and write `telnet localhost 11211`:
-   ![run the Telnet client](https://drive.google.com/uc?export=view&id=11_95zrEbuWjHC3yQaSnJEIqoBjgiQIcd)
+   ![run the Telnet client](https://i.imgur.com/A3zLlni.png)
 
 **2.** Just start writing commands:
-   ![run the Telnet client](https://drive.google.com/uc?export=view&id=1Axj6FxZpCZnVQg3buKNwtByHMp2bPQc3)
+   ![run the Telnet client](https://i.imgur.com/BXnrTVE.png)
 
 ### How to execute the unit tests:
 
 **1.** **With the server up and running**, in the project's root folder, open a terminal or CMD and type `rspec -P "**/*_spec.rb"` to run all unit tests associated to the server operations:
-   ![exec the rspec command](https://drive.google.com/uc?export=view&id=12AbMUk9bksHVX7zTrtsKv5AQrhoHYxz2)
+   ![exec the rspec command](https://i.imgur.com/waDZ02A.png)
