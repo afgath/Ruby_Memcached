@@ -36,7 +36,7 @@ In order to keep it as simple as possible, you will only have to follow two step
 
 And that's it, now you have a fully functional Memcached server running on the default port: **11211**
 
-### How to issue sample commands using Telnet client:
+### How to issue sample commands using Telnet client: 
 Now that your Memcached server is up, you can use the Telnet client to issue commands this way:
 
 **1.** Open a terminal or CMD and write `telnet localhost 11211`:
