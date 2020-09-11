@@ -1,6 +1,7 @@
 require 'socket'
 require 'time'
 require './item'
+require './utils'
 
 
 cache = {} # Hash to save the items
