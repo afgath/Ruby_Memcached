@@ -1,5 +1,5 @@
+require './item'
 class Utils
-
   #Method that gets and validates the array with the header of the command
   def validate_headers(array_validate)
     # Generic Validations
@@ -42,14 +42,16 @@ class Utils
       BASIC_ERR
     end
   end
-  def self.validate_value
+  def validate_value(bytes, value)
+    real_bytes = value.length
+    if real_bytes == bytes.to_i
+      true
+    elsif real_bytes > bytes.to_i
+      false
+    else
+      nil
+    end
   end
-  def self.assign_id
-  end
-  def self.manage_linebreak
-
-  end
-
   # Constants Section
   # Errors
   BASIC_ERR = "ERROR\r\n"
@@ -61,6 +63,7 @@ class Utils
   NOT_FOUND_ERR = "NOT_FOUND\r\n"
   # Messages
   STORED_MSG = "STORED\r\n"
+  NOT_STORED_MSG = "NOT_STORED\r\n"
   OK_MSG = "OK\r\n"
   END_MSG = "END\r\n"
   DELETED_MSG = "DELETED\r\n"
