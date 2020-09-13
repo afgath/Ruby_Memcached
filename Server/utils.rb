@@ -38,6 +38,10 @@ class Utils
       if array_validate.length != 2
         BASIC_ERR
       end
+    when QUIT
+      if array_validate.length != 1
+        BASIC_ERR
+      end
     else
       BASIC_ERR
     end
@@ -80,4 +84,5 @@ class Utils
   GETS = 'GETS'
   DELETE = 'DELETE'
   FLUSH_ALL = 'FLUSH_ALL'
+  QUIT = 'QUIT'
 end
