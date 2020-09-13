@@ -210,16 +210,6 @@ describe MemcachedDummy do
       end
     end
   end
-  describe '#set_incorect_more_bytes' do
-    context 'sending set command with more bytes than the data' do
-      it "returns Error" do
-        @socket.puts('set dataMore 0 0 30')
-        sleep 1
-        @socket.puts('Less Than the bytes')
-        expect(@socket.gets.chomp).to eql('CLIENT_ERROR bad data chunk')
-      end
-    end
-  end
   describe '#replace_existent_value' do
     context 'replacing a value that already exists' do
       it "returns STORED" do

@@ -67,4 +67,28 @@ describe MemcachedDummy do
       end
     end
   end
+  describe '#append_exceed_value' do
+    context 'appends data exceeding the number of bytes' do
+      it "returns Client ERROR" do
+        @socket.puts('set data 0 0 5')
+        sleep 1
+        @socket.puts('hello')
+        @socket.gets
+        @socket.puts('append data 0 0 9')
+        sleep 1
+        @socket.puts(', Hire mesdgfgfsdrt')
+        expect(@socket.gets.chomp).to eql("CLIENT_ERROR bad data chunk")
+      end
+    end
+  end
+  describe '#prepend_exceed_value' do
+    context 'prepends data exceeding the number of bytes' do
+      it "returns Client ERROR" do
+        @socket.puts('prepend data 0 0 4')
+        sleep 1
+        @socket.puts('Oh! sdgsdfgdf')
+        expect(@socket.gets.chomp).to eql("CLIENT_ERROR bad data chunk")
+      end
+    end
+  end
 end

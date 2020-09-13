@@ -43,7 +43,7 @@
           <stringProp name="TCPSampler.port">11211</stringProp>
           <boolProp name="TCPSampler.nodelay">false</boolProp>
           <stringProp name="TCPSampler.timeout"></stringProp>
-          <stringProp name="TCPSampler.ctimeout">600</stringProp>
+          <stringProp name="TCPSampler.ctimeout">120000</stringProp>
           <stringProp name="TCPSampler.request">add data${diffId} 0 0 5${CR}${LF}
 hello${CR}${LF}
 cas data${diffId} 0 0 4 1${CR}${LF}
@@ -52,20 +52,21 @@ set data${diffId} 0 0 11${CR}${LF}
 hello world${CR}${LF}
 replace data${diffId} 0 0 2${CR}${LF}
 15${CR}${LF}
-incr data${diffId} 20${CR}${LF}
+incr data${diffId} 5${CR}${LF}
 decr data${diffId} 5${CR}${LF}
 append data${diffId} 0 0 8${CR}${LF}
 Moove-it${CR}${LF}
 prepend data${diffId} 0 0 8${CR}${LF}
 Moove-it${CR}${LF}
 get data${diffId}${CR}${LF}
-gets data${diffId}${CR}${LF}</stringProp>
+gets data${diffId}${CR}${LF}
+quit${CR}${LF}</stringProp>
           <boolProp name="TCPSampler.closeConnection">true</boolProp>
           <stringProp name="ConfigTestElement.username"></stringProp>
           <stringProp name="ConfigTestElement.password"></stringProp>
         </TCPSampler>
         <hashTree>
-          <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="false">
+          <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
             <boolProp name="ResultCollector.error_logging">false</boolProp>
             <objProp>
               <name>saveConfig</name>
