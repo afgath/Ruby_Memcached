@@ -258,7 +258,7 @@ describe MemcachedDummy do
     context 'cas data before timed flush ends' do
       it "returns STORED" do
         @socket.puts('cas data 0 0 14 4') # Se usa el mismo valor obtenido en el gets: 13
-        sleep 1
+        sleep 3
         @socket.puts('Hello Moove-It')
         expect(@socket.gets.chomp).to eql("STORED")
       end
@@ -398,20 +398,20 @@ describe MemcachedDummy do
       end
     end
   end
-  # describe '#flush_all_timing' do
-  #   context 'Flush all in 1000 seconds' do
-  #     it "returns OK" do
-  #       @socket.puts('flush_all 1000')
-  #       expect(@socket.gets.chomp).to eql('OK')
-  #     end
-  #   end
-  # end
-  # describe '#flush_all' do
-  #   context 'Flush all now' do
-  #     it "returns OK" do
-  #       @socket.puts('flush_all')
-  #       expect(@socket.gets.chomp).to eql('OK')
-  #     end
-  #   end
-  # end
+  describe '#flush_all_timing' do
+    context 'Flush all in 1000 seconds' do
+      it "returns OK" do
+        @socket.puts('flush_all 1000')
+        expect(@socket.gets.chomp).to eql('OK')
+      end
+    end
+  end
+  describe '#flush_all' do
+    context 'Flush all now' do
+      it "returns OK" do
+        @socket.puts('flush_all')
+        expect(@socket.gets.chomp).to eql('OK')
+      end
+    end
+  end
 end

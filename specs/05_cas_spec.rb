@@ -32,7 +32,7 @@ describe MemcachedDummy do
     context 'cas data' do
       it "returns STORED" do
         @socket.puts('flush_all')
-        @socket.gets
+        sleep 3
         @socket.puts('set dataCas 0 0 5')
         @socket.puts('hello')
         @socket.gets

@@ -52,57 +52,28 @@ class Memcached
 
   # Method for save commands(SET, ADD, REPLACE)
   # Specific cache validations for the operations
-  def save(array_validate, value, socket)
+  def save(array_validate, value)
     if array_validate.count == 5 # If item hasn't set the NoReply attribute
       item = Item.new(array_validate[2], array_validate[3], array_validate[4], '', nil, nil, 0)
     elsif array_validate.count == 6 # If item has set the NoReply attribute
       item = Item.new(array_validate[2], array_validate[3], array_validate[4], array_validate[5], nil, nil, 0)
     end
-    valid_value = @utils.validate_value(item.bytes, value)
-    if value == ''
-      value = " \n"
-    end
-    while valid_value.nil? do
-      new_value = socket.gets
-      if new_value.chomp != ''
-        new_value = new_value.chomp
-      end
-      value += "\n" + new_value
-      valid_value = @utils.validate_value(item.bytes, value)
-    end
-    if valid_value
-      if (array_validate[0].upcase == Utils::ADD && @cache.any? && !@cache[array_validate[1]].nil?) ||
-         (array_validate[0].upcase == Utils::REPLACE && @cache[array_validate[1]].nil?) # If command=add then key must not exist
-        Utils::NOT_STORED_MSG
-      else
-        add_item(array_validate[1], item, value)
-        Utils::STORED_MSG
-      end
+    if (array_validate[0].upcase == Utils::ADD && @cache.any? && !@cache[array_validate[1]].nil?) ||
+        (array_validate[0].upcase == Utils::REPLACE && @cache[array_validate[1]].nil?) # If command=add then key must not exist
+      Utils::NOT_STORED_MSG
     else
-      Utils::CHUNK_ERR
+      add_item(array_validate[1], item, value)
+      Utils::STORED_MSG
     end
   end
 
   # Method for APPEND or PREPEND operations
   # Validates instance before concatenate the value
   # before or after the previous value
-  def concat(array_validate, value, socket)
+  def concat(array_validate, value)
     if @cache[array_validate[1]].nil?
-      return Utils::NOT_STORED_MSG
-    end
-    valid_value = @utils.validate_value(array_validate[4], value)
-    if value == ''
-      value = " \n"
-    end
-    while valid_value.nil? do
-      new_value = socket.gets
-      if new_value.chomp != ''
-        new_value = new_value.chomp
-      end
-      value += "\n" + new_value
-      valid_value = @utils.validate_value(array_validate[4], value)
-    end
-    if valid_value
+      Utils::NOT_STORED_MSG
+    else
       key = array_validate[1]
       item = @cache[array_validate[1]]
       local_value = @cache[array_validate[1]].value.to_s + value.to_s unless array_validate[0].upcase == Utils::PREPEND
@@ -110,39 +81,18 @@ class Memcached
       item.flags = array_validate[2]
       item.exptime = array_validate[3]
       item.bytes = (@cache[array_validate[1]].bytes.to_i + array_validate[4].to_i).to_s
-      item.noreply = array_validate[5]
+      item.noreply = array_validate[5] unless array_validate[5].nil?
       add_item(key, item, local_value)
       Utils::STORED_MSG
-    else
-      Utils::CHUNK_ERR
     end
   end
 
   # Method to modify a value that hasn't been previously modified
-  def cas(array_validate, value, socket)
-    mark_exists = false
-    mark_notfound = false
+  def cas(array_validate, value)
     if @cache[array_validate[1]].nil?
-      mark_notfound = true
+      Utils::NOT_FOUND_ERR
     elsif @cache[array_validate[1]].id.to_i != array_validate[5].to_i
-      mark_exists = true
-    end
-    valid_value = @utils.validate_value(array_validate[4], value)
-    if value == ''
-      value = " \n"
-    end
-    while valid_value.nil? do
-      new_value = socket.gets
-      if new_value.chomp != ''
-        new_value = new_value.chomp
-      end
-      value += "\n" + new_value
-      valid_value = @utils.validate_value(array_validate[4], value)
-    end
-    if mark_exists || mark_notfound || !valid_value
-      return Utils::EXISTS_ERR unless mark_notfound || !valid_value
-      return Utils::NOT_FOUND_ERR unless  mark_exists || !valid_value
-      return Utils::CHUNK_ERR unless  mark_exists || mark_notfound
+      Utils::EXISTS_ERR
     else
       key = array_validate[1]
       item = @cache[array_validate[1]]
@@ -215,10 +165,8 @@ class Memcached
               socket.close
               Thread.exit
             else
-              @mutex.synchronize do # Synchronization of operations for mutual-exclusion and visibility
-                request = request.chomp # To avoid chomp a nil
-                puts request
-              end
+              request = request.chomp # To avoid chomp a nil
+              puts request
             end
           end
           array_validate = request.split(' ')
@@ -227,7 +175,9 @@ class Memcached
             # If item is already expired, then is deleted before any process
             if !@cache[array_validate[1]].nil? && @cache[array_validate[1]].exptime.to_i.positive? &&
                (Time.new - @cache[array_validate[1]].time).to_i >= @cache[array_validate[1]].exptime.to_i
-              @cache.delete(array_validate[1])
+              @mutex.synchronize do # Synchronization of operations for mutual-exclusion and visibility
+                @cache.delete(array_validate[1])
+              end
             end
             @mutex.synchronize do # Synchronization of operations for mutual-exclusion and visibility
               case array_validate[0].upcase
@@ -236,18 +186,34 @@ class Memcached
                 Thread.exit
               when Utils::DELETE
                 socket.write(delete(array_validate))
-              when Utils::SET, Utils::ADD, Utils::REPLACE
-                value = socket.gets.chomp
-                socket.write(save(array_validate, value, socket))
+              when Utils::SET, Utils::ADD, Utils::REPLACE, Utils::APPEND, Utils::PREPEND, Utils::CAS
+                full_value = ''
+                correct = nil
+                first = true
+                loop do
+                  value = socket.gets
+                  if first
+                    full_value = value
+                    first = false
+                  else
+                    full_value += "\n" + value
+                  end
+                    correct = @utils.validate_value(array_validate[4],full_value)
+                  break unless correct.nil?
+                end
+                # Separated method depending on
+                if correct && (array_validate[0].upcase == Utils::APPEND || array_validate[0].upcase == Utils::PREPEND)
+                  socket.write(concat(array_validate, full_value))
+                elsif correct && array_validate[0].upcase == Utils::CAS
+                  socket.write(cas(array_validate, full_value))
+                elsif correct
+                  socket.write(save(array_validate, full_value))
+                else
+                  socket.write(Utils::CHUNK_ERR)
+                end
               when Utils::GET, Utils::GETS
                 socket.write(get(array_validate))
                 socket.write(Utils::END_MSG)
-              when Utils::APPEND, Utils::PREPEND
-                value = socket.gets.chomp
-                socket.write(concat(array_validate, value, socket))
-              when Utils::CAS
-                value = socket.gets.chomp
-                socket.write(cas(array_validate, value, socket))
               when Utils::INCR, Utils::DECR
                 socket.write(incr_decr(array_validate))
               when Utils::FLUSH_ALL

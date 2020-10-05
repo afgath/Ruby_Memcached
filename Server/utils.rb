@@ -47,6 +47,12 @@ class Utils
     end
   end
   def validate_value(bytes, value)
+    if value == ''
+      value = " \n"
+    end
+    if value.chomp != ''
+      value = value.chomp
+    end
     real_bytes = value.length
     if real_bytes == bytes.to_i
       true
