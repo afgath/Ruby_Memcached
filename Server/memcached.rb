@@ -1,22 +1,18 @@
 require 'socket'
 require 'time'
-require './item'
-require './utils'
+require_relative './item'
+require_relative './utils'
 
 class Memcached
-  attr_accessor :port
-  attr_reader :hostname, :server, :highest_id, :cache, :mutex, :utils, :timer, :threads
+  attr_accessor :cache, :highest_id, :timer
+  attr_reader :utils, :deletion_process
 
-  def initialize(port)
+  def initialize
     @cache = {}
-    @hostname = '127.0.0.1'
-    @port = port
-    @server = TCPServer.open(@hostname, port)
     @highest_id = 1
-    @mutex = Mutex.new
     @utils = Utils.new
     @timer = nil # Thread that contains the flush_all if is timed
-    @threads = [] # Threads opened to do operations
+    @deletion_process = false
   end
 
   # Method to purge expired items from cache every 10 minutes
@@ -28,6 +24,7 @@ class Memcached
         sleep(interval)
       end
     end
+    @deletion_process = true
   end
 
   # Method to delete specific item by key
@@ -136,7 +133,6 @@ class Memcached
       value = 'VALUE ' + array_validate[1] + ' ' + item.to_s + ' ' + item.id.to_s + "\r\n" + item_value unless item.nil?|| array_validate[0].upcase == Utils::GET
       # GET
       value = 'VALUE ' + array_validate[1] + ' ' + item.to_s + "\r\n" + item_value unless item.nil? || array_validate[0].upcase == Utils::GETS
-      value += "\r\n" unless value.nil?
       value
     end
   end
@@ -150,85 +146,5 @@ class Memcached
       @timer = Thread.new { sleep array_validate[1].to_i; ; @cache = {}; @highest_id = 1 }
     end
     Utils::OK_MSG
-  end
-
-  # Method used to start the server
-  def start
-    purge_values
-    @threads = loop do
-      Thread.new(@server.accept) do |socket| # Multi-thread started so it can serve multiple clients
-        request = nil
-        loop do
-          if request.nil?
-            request = socket.gets
-            if request.nil?
-              socket.close
-              Thread.exit
-            else
-              request = request.chomp # To avoid chomp a nil
-              puts request
-            end
-          end
-          array_validate = request.split(' ')
-          headers_error = @utils.validate_headers(array_validate)
-          if headers_error.nil? || headers_error == ''
-            # If item is already expired, then is deleted before any process
-            if !@cache[array_validate[1]].nil? && @cache[array_validate[1]].exptime.to_i.positive? &&
-               (Time.new - @cache[array_validate[1]].time).to_i >= @cache[array_validate[1]].exptime.to_i
-              @mutex.synchronize do # Synchronization of operations for mutual-exclusion and visibility
-                @cache.delete(array_validate[1])
-              end
-            end
-            @mutex.synchronize do # Synchronization of operations for mutual-exclusion and visibility
-              case array_validate[0].upcase
-              when Utils::QUIT
-                socket.close
-                Thread.exit
-              when Utils::DELETE
-                socket.write(delete(array_validate))
-              when Utils::SET, Utils::ADD, Utils::REPLACE, Utils::APPEND, Utils::PREPEND, Utils::CAS
-                full_value = ''
-                correct = nil
-                first = true
-                loop do
-                  value = socket.gets
-                  if first
-                    full_value = value
-                    first = false
-                  else
-                    full_value += "\n" + value
-                  end
-                    correct = @utils.validate_value(array_validate[4],full_value)
-                  break unless correct.nil?
-                end
-                # Separated method depending on
-                if correct && (array_validate[0].upcase == Utils::APPEND || array_validate[0].upcase == Utils::PREPEND)
-                  socket.write(concat(array_validate, full_value))
-                elsif correct && array_validate[0].upcase == Utils::CAS
-                  socket.write(cas(array_validate, full_value))
-                elsif correct
-                  socket.write(save(array_validate, full_value))
-                else
-                  socket.write(Utils::CHUNK_ERR)
-                end
-              when Utils::GET, Utils::GETS
-                socket.write(get(array_validate))
-                socket.write(Utils::END_MSG)
-              when Utils::INCR, Utils::DECR
-                socket.write(incr_decr(array_validate))
-              when Utils::FLUSH_ALL
-                socket.write(flush_all(array_validate))
-              else
-                socket.write(Utils::BASIC_ERR)
-              end
-            end
-          else
-            socket.write(headers_error)
-          end
-          request = nil
-          @threads.each(&:join)
-        end
-      end
-    end
   end
 end

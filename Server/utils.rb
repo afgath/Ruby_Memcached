@@ -1,4 +1,4 @@
-require './item'
+require_relative './item'
 class Utils
   #Method that gets and validates the array with the header of the command
   def validate_headers(array_validate)
