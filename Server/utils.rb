@@ -27,7 +27,7 @@ class Utils
     when APPEND, PREPEND, SET, ADD, REPLACE
       if array_validate.length < 5 || array_validate.length > 6
         BASIC_ERR
-      elsif array_validate[2].to_i.negative? || array_validate[3].to_i.negative? || array_validate[4].to_i.negative?
+      elsif array_validate[2].to_i.negative? || array_validate[3].to_i.negative? || array_validate[4].to_i < 1
         LINE_FORMAT_ERR
       end
     when CAS

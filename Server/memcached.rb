@@ -96,7 +96,7 @@ class Memcached
       item.flags = array_validate[2]
       item.exptime = array_validate[3]
       item.bytes = array_validate[4]
-      item.noreply = array_validate[6]
+      item.noreply = array_validate[6] unless array_validate[6].nil?
       add_item(key, item, value)
       Utils::STORED_MSG
     end
